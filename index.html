@@ -1,0 +1,1828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Task Manager</title>
+  <style>
+    :root {
+      --bg: #ece1f1;
+      --card: #ffffff;
+      --text: #201329;
+      --muted: #433456;
+      --primary: #7f2798;
+      --primary-hover: #691d83;
+      --danger: #9f205b;
+      --border: #b9a0c9;
+      --done: #6d587d;
+      --chip: #ceb9d8;
+      --success: #2f9f7b;
+      --warning: #d98522;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      line-height: 1.35;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        repeating-linear-gradient(
+          0deg,
+          rgba(242, 85, 164, 0.025) 0px,
+          rgba(242, 85, 164, 0.025) 1px,
+          rgba(255, 255, 255, 0) 1px,
+          rgba(255, 255, 255, 0) 4px
+        ),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0) 0px,
+          rgba(255, 255, 255, 0) 18px,
+          rgba(227, 71, 143, 0.02) 18px,
+          rgba(227, 71, 143, 0.02) 19px
+        ),
+        radial-gradient(circle at 15% 20%, rgba(222, 168, 241, 0.28) 0%, rgba(222, 168, 241, 0) 42%),
+        radial-gradient(circle at 82% 18%, rgba(196, 169, 234, 0.26) 0%, rgba(196, 169, 234, 0) 38%),
+        radial-gradient(circle at 80% 82%, rgba(236, 190, 225, 0.28) 0%, rgba(236, 190, 225, 0) 40%),
+        var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 28px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 980px;
+      background: linear-gradient(180deg, #fdfbff 0%, #e7d8ee 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 16px 36px rgba(48, 22, 69, 0.24);
+      text-align: center;
+    }
+
+    .workspace-views {
+      width: 100%;
+      max-width: 1980px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: start;
+      justify-items: center;
+    }
+
+    .workspace-views.admin-split {
+      grid-template-columns: 1fr 1fr;
+      justify-items: stretch;
+    }
+
+    .workspace-views.admin-split .app {
+      max-width: none;
+    }
+
+    .workspace-views.admin-split #adminApp {
+      order: 1;
+    }
+
+    .workspace-views.admin-split #taskApp {
+      order: 2;
+    }
+
+    .auth-card {
+      width: 100%;
+      max-width: 420px;
+      background: linear-gradient(180deg, #fdfbff 0%, #e8d9ef 100%);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px;
+      box-shadow: 0 16px 36px rgba(48, 22, 69, 0.26);
+      display: grid;
+      gap: 14px;
+      text-align: center;
+      height: 100%;
+    }
+
+    .auth-layout {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(280px, 420px));
+      gap: 18px;
+      justify-content: center;
+      align-items: stretch;
+    }
+
+    .auth-layout[hidden] {
+      display: none !important;
+    }
+
+    .auth-card h2 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+    }
+
+    .auth-msg {
+      min-height: 20px;
+      font-size: 0.9rem;
+      color: var(--danger);
+    }
+
+    .auth-msg.success {
+      color: var(--success);
+    }
+
+    .password-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      margin-top: -4px;
+    }
+
+    .password-toggle input {
+      width: auto;
+      margin: 0;
+      accent-color: var(--primary);
+    }
+
+    .auth-divider {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 4px 0;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .welcome {
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: left;
+    }
+
+    .actions-inline {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+      font-weight: 800;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 18px;
+      font-size: 0.96rem;
+      font-weight: 500;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .span-2 {
+      grid-column: span 2;
+    }
+
+    .field {
+      display: grid;
+      gap: 7px;
+    }
+
+    .field.notes-center {
+      grid-column: 2 / span 2;
+      text-align: center;
+    }
+
+    .field.side-by-side-left,
+    .field.side-by-side-right {
+      text-align: center;
+    }
+
+    .field.side-by-side-left {
+      grid-column: 1 / span 2;
+    }
+
+    .field.side-by-side-right {
+      grid-column: 3 / span 2;
+    }
+
+    .field label {
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      color: var(--muted);
+    }
+
+    input:not([type='checkbox']),
+    select,
+    textarea {
+      border: 1px solid #b59ac6;
+      background: #f2e8f7;
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.94rem;
+      font-weight: 600;
+      outline: none;
+      width: 100%;
+      text-align: center;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #5a4872;
+      opacity: 0.9;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(140, 49, 165, 0.32);
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    #dueReminderInfo {
+      min-height: 140px;
+      resize: none;
+      text-align: left;
+      font-size: 0.98rem;
+      padding: 12px 14px;
+      line-height: 1.5;
+      border-radius: 12px;
+      border: 1px solid #ae94c2;
+      background: #faf5ff;
+      box-shadow: inset 0 1px 3px rgba(63, 31, 86, 0.1);
+    }
+
+    @keyframes dueReminderBlink {
+      0%,
+      100% {
+        background: #eef5ff;
+        color: #0f2f66;
+        border-color: #3b82f6;
+        box-shadow: inset 0 1px 3px rgba(63, 31, 86, 0.1), 0 0 0 3px rgba(59, 130, 246, 0.25);
+      }
+      50% {
+        background: #ffeef0;
+        color: #7a1220;
+        border-color: #ef4444;
+        box-shadow: inset 0 1px 3px rgba(63, 31, 86, 0.1), 0 0 0 3px rgba(239, 68, 68, 0.25);
+      }
+    }
+
+    #dueReminderInfo.blink-alert {
+      animation: dueReminderBlink 1s infinite;
+      font-weight: 700;
+    }
+
+    #notesInput {
+      min-height: 140px;
+      font-size: 0.98rem;
+      padding: 12px 14px;
+      text-align: left;
+      line-height: 1.5;
+      border-radius: 12px;
+      border: 1px solid #ae94c2;
+      background: #fffaff;
+      box-shadow: inset 0 1px 3px rgba(63, 31, 86, 0.1);
+    }
+
+    #dueReminderInfo::placeholder,
+    #notesInput::placeholder {
+      text-align: left;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin: 14px 0 18px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+      box-shadow: 0 6px 14px rgba(63, 31, 86, 0.25);
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    #addTaskBtn {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    #addTaskBtn:hover {
+      background: var(--primary-hover);
+    }
+
+    #clearCompletedBtn {
+      background: #c7afda;
+      color: var(--text);
+    }
+
+    #clearCompletedBtn:hover {
+      background: #b9a2cf;
+    }
+
+    #cancelEditBtn {
+      background: #caabcc;
+      color: #5a275c;
+    }
+
+    #cancelEditBtn:hover {
+      background: #bc99c1;
+    }
+
+    #logoutBtn {
+      background: #c5a3c8;
+      color: var(--danger);
+    }
+
+    #logoutBtn:hover {
+      background: #b691bb;
+    }
+
+    #enableNotificationsBtn {
+      background: #c7afda;
+      color: var(--text);
+    }
+
+    #enableNotificationsBtn:hover {
+      background: #b9a2cf;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 13px;
+      background: #ffffff;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(63, 31, 86, 0.16);
+    }
+
+    .stat .label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+    }
+
+    .stat .value {
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .filters {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .filter-btn {
+      padding: 8px 14px;
+      font-weight: 600;
+      background: #c2a9d0;
+      color: #361e43;
+      border-radius: 999px;
+      box-shadow: none;
+    }
+
+    .filter-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .admin-panel {
+      margin: 0 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      background: #ffffff;
+      box-shadow: 0 6px 14px rgba(63, 31, 86, 0.16);
+      text-align: left;
+    }
+
+    .admin-title {
+      margin-bottom: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+      text-align: center;
+    }
+
+    .admin-upcoming {
+      margin-top: 10px;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      padding: 0;
+    }
+
+    .admin-upcoming-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 10px;
+      background: #f7effb;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .admin-upcoming-item strong {
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .admin-upcoming-item span {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .admin-subtitle {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .admin-requests {
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      padding: 0;
+      margin: 0;
+    }
+
+    .admin-request-item {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      background: #f7effb;
+      display: grid;
+      gap: 8px;
+    }
+
+    .admin-request-meta {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .admin-request-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .approve-btn {
+      background: #b2d8c8;
+      color: #184b39;
+      border-radius: 8px;
+      padding: 6px 12px;
+      box-shadow: none;
+      font-size: 0.84rem;
+    }
+
+    .approve-btn:hover {
+      background: #9ecdb9;
+    }
+
+    .reject-btn {
+      background: #ddb7ca;
+      color: #5c1e3d;
+      border-radius: 8px;
+      padding: 6px 12px;
+      box-shadow: none;
+      font-size: 0.84rem;
+    }
+
+    .reject-btn:hover {
+      background: #d4a5bd;
+    }
+
+    #taskList {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .task {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      padding: 13px 15px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: #ffffff;
+      align-items: center;
+      transition: transform 0.15s ease, box-shadow 0.2s ease;
+    }
+
+    .task:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(63, 31, 86, 0.2);
+    }
+
+    .task-main {
+      display: grid;
+      gap: 5px;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .task-title {
+      font-weight: 800;
+      font-size: 0.98rem;
+      letter-spacing: 0.2px;
+      word-break: break-word;
+    }
+
+    .task-note {
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      white-space: pre-wrap;
+      width: 100%;
+      text-align: justify;
+    }
+
+    .task-meta-row {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .edit-btn {
+      border-radius: 6px;
+      background: #b49bc6;
+      color: #2f1a46;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.86rem;
+    }
+
+    .edit-btn:hover {
+      background: #a187ba;
+    }
+
+    .chip {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      background: var(--chip);
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: #261537;
+    }
+
+    .chip.high {
+      background: #c79ac7;
+      color: #45124d;
+    }
+
+    .chip.medium {
+      background: #cfafbf;
+      color: #49233f;
+    }
+
+    .chip.low {
+      background: #cde8dc;
+      color: #1c503d;
+    }
+
+    .chip.overdue {
+      background: #c18cad;
+      color: #4a1031;
+    }
+
+    .chip.today {
+      background: #ffe3a8;
+      color: #6b3f00;
+      border: 1px solid #e5b866;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      min-width: 130px;
+    }
+
+    .task.done .task-title,
+    .task.done .task-note {
+      color: var(--done);
+      text-decoration: line-through;
+    }
+
+    .delete-btn {
+      border: none;
+      border-radius: 6px;
+      background: #c09fc6;
+      color: var(--danger);
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.86rem;
+    }
+
+    .delete-btn:hover {
+      background: #b38bb9;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 16px;
+      border: 1px dashed var(--border);
+      border-radius: 12px;
+      background: #e1d3e7;
+    }
+
+    @media (max-width: 900px) {
+      .grid,
+      .stats {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .field.side-by-side-left,
+      .field.side-by-side-right {
+        grid-column: auto;
+      }
+
+      .workspace-views.admin-split {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .auth-layout {
+        grid-template-columns: repeat(2, minmax(280px, 420px));
+      }
+
+      body {
+        padding: 14px;
+      }
+
+      .app,
+      .auth-card {
+        padding: 16px;
+        border-radius: 14px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .subtitle {
+        margin-bottom: 14px;
+      }
+
+      .grid,
+      .stats {
+        grid-template-columns: 1.5fr 1fr 1fr 1fr;
+      }
+
+      .actions,
+      .filters,
+      .meta {
+        gap: 8px;
+      }
+
+      button {
+        padding: 9px 14px;
+      }
+
+      .task {
+        grid-template-columns: auto 1fr;
+        padding: 11px 12px;
+      }
+
+      .task-actions {
+        grid-column: span 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-layout" id="authViews">
+  <section class="auth-card" id="loginView">
+    <h2>Log In</h2>
+    <p class="subtitle">Access my task manager.</p>
+
+    <div class="field">
+      <label for="loginUsername">Username</label>
+      <input id="loginUsername" type="text" placeholder="Enter username" />
+    </div>
+
+    <div class="field">
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" placeholder="Enter password" />
+    </div>
+
+    <label class="password-toggle" for="showLoginPassword">
+      <input id="showLoginPassword" type="checkbox" />
+      Show Password
+    </label>
+
+    <button id="loginBtn" type="button">Log In</button>
+    <p class="auth-msg" id="loginMsg"></p>
+  </section>
+
+  <section class="auth-card" id="registerView">
+    <h2>Create New Account</h2>
+    <p class="subtitle">Registration request to Admin</p>
+
+    <div class="field">
+      <label for="registerUsername">New Username</label>
+      <input id="registerUsername" type="text" placeholder="Choose username" />
+    </div>
+
+    <div class="field">
+      <label for="registerPassword">New Password</label>
+      <input id="registerPassword" type="password" placeholder="Choose password" />
+    </div>
+
+    <label class="password-toggle" for="showRegisterPassword">
+      <input id="showRegisterPassword" type="checkbox" />
+      Show Password
+    </label>
+
+    <div class="field">
+      <label for="registerEmail">Your Email</label>
+      <input id="registerEmail" type="email" placeholder="Enter your email" />
+    </div>
+
+    <button id="saveCredsBtn" type="button">Request Registration</button>
+    <p class="auth-msg" id="credsMsg"></p>
+  </section>
+  </div>
+
+  <div class="workspace-views" id="workspaceViews">
+  <main class="app" id="taskApp" hidden>
+    <div class="topbar">
+      <p class="welcome" id="welcomeText"></p>
+      <div class="actions-inline">
+        <button id="enableNotificationsBtn" type="button">Enable Reminders</button>
+        <button id="logoutBtn" type="button">Log Out</button>
+      </div>
+    </div>
+
+    <h1>My Task Manager</h1>
+    <p class="subtitle">Plan school and work tasks in one place with priorities and deadlines.</p>
+
+    <div class="grid">
+      <div class="field span-2">
+        <label for="taskInput">Task title</label>
+        <input id="taskInput" type="text" placeholder="Example: Work - Client follow-up | Classes - Case study report" />
+      </div>
+
+      <div class="field">
+        <label for="categoryInput">Category</label>
+        <select id="categoryInput">
+          <option value="Classes">Classes</option>
+          <option value="Work">Work</option>
+          <option value="Personal">Personal</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="priorityInput">Priority</label>
+        <select id="priorityInput">
+          <option value="High">High</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="dueInput">Due date & time</label>
+        <input id="dueInput" type="datetime-local" />
+      </div>
+
+      <div class="field">
+        <label for="durationDaysInput">Estimated days</label>
+        <input id="durationDaysInput" type="number" min="0" step="1" placeholder="0" />
+      </div>
+
+      <div class="field">
+        <label for="durationHoursInput">Estimated hours</label>
+        <input id="durationHoursInput" type="number" min="0" step="1" placeholder="0" />
+      </div>
+
+      <div class="field">
+        <label for="durationMinutesInput">Estimated minutes</label>
+        <input id="durationMinutesInput" type="number" min="0" step="5" placeholder="0" />
+      </div>
+
+      <div class="field side-by-side-left">
+        <label for="dueReminderInfo">Due Today Reminder</label>
+        <textarea id="dueReminderInfo" readonly>Tasks due today are highlighted and reminded at due time.</textarea>
+      </div>
+
+      <div class="field side-by-side-right">
+        <label for="notesInput">Notes</label>
+        <textarea id="notesInput" placeholder="Class section, office shift, links, reminders..."></textarea>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="addTaskBtn">Add Task</button>
+      <button id="cancelEditBtn" type="button" hidden>Cancel Edit</button>
+      <button id="clearCompletedBtn" type="button">Clear Completed</button>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><div class="label">Total</div><div class="value" id="totalStat">0</div></div>
+      <div class="stat"><div class="label">Pending</div><div class="value" id="pendingStat">0</div></div>
+      <div class="stat"><div class="label">Completed</div><div class="value" id="completedStat">0</div></div>
+      <div class="stat"><div class="label">Overdue</div><div class="value" id="overdueStat">0</div></div>
+      <div class="stat"><div class="label">Due Today</div><div class="value" id="todayStat">0</div></div>
+    </div>
+
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="pending">Pending</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+      <button class="filter-btn" data-filter="overdue">Overdue</button>
+      <button class="filter-btn" data-filter="classes">Classes</button>
+      <button class="filter-btn" data-filter="work">Work</button>
+      <button class="filter-btn" data-filter="personal">Personal</button>
+    </div>
+
+    <div class="meta">
+      <span id="taskCount">0 tasks</span>
+      <small>Use filters to focus classes/work/personal priorities</small>
+    </div>
+
+    <ul id="taskList"></ul>
+  </main>
+
+  <main class="app" id="adminApp" hidden>
+    <div class="topbar">
+      <div class="actions-inline">
+        <button id="adminLogoutBtn" type="button">Log Out</button>
+      </div>
+    </div>
+
+    <h1>Admin Dashboard</h1>
+    <p class="subtitle">Manage registration requests.</p>
+
+    <section class="admin-panel" id="adminDashboard">
+      <ul class="admin-requests" id="adminRegistrationList"></ul>
+    </section>
+  </main>
+  </div>
+
+  <script>
+    const authViews = document.getElementById('authViews');
+    const workspaceViews = document.getElementById('workspaceViews');
+    const loginView = document.getElementById('loginView');
+    const registerView = document.getElementById('registerView');
+    const taskApp = document.getElementById('taskApp');
+    const adminApp = document.getElementById('adminApp');
+    const loginUsername = document.getElementById('loginUsername');
+    const loginPassword = document.getElementById('loginPassword');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginMsg = document.getElementById('loginMsg');
+    const showLoginPassword = document.getElementById('showLoginPassword');
+    const registerUsername = document.getElementById('registerUsername');
+    const registerPassword = document.getElementById('registerPassword');
+    const showRegisterPassword = document.getElementById('showRegisterPassword');
+    const registerEmail = document.getElementById('registerEmail');
+    const saveCredsBtn = document.getElementById('saveCredsBtn');
+    const credsMsg = document.getElementById('credsMsg');
+    const welcomeText = document.getElementById('welcomeText');
+    const enableNotificationsBtn = document.getElementById('enableNotificationsBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const adminLogoutBtn = document.getElementById('adminLogoutBtn');
+
+    const taskInput = document.getElementById('taskInput');
+    const categoryInput = document.getElementById('categoryInput');
+    const priorityInput = document.getElementById('priorityInput');
+    const dueInput = document.getElementById('dueInput');
+    const dueReminderInfo = document.getElementById('dueReminderInfo');
+    const durationDaysInput = document.getElementById('durationDaysInput');
+    const durationHoursInput = document.getElementById('durationHoursInput');
+    const durationMinutesInput = document.getElementById('durationMinutesInput');
+    const notesInput = document.getElementById('notesInput');
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const clearCompletedBtn = document.getElementById('clearCompletedBtn');
+    const taskList = document.getElementById('taskList');
+    const taskCount = document.getElementById('taskCount');
+    const totalStat = document.getElementById('totalStat');
+    const pendingStat = document.getElementById('pendingStat');
+    const completedStat = document.getElementById('completedStat');
+    const overdueStat = document.getElementById('overdueStat');
+    const todayStat = document.getElementById('todayStat');
+    const adminDashboard = document.getElementById('adminDashboard');
+    const adminRegistrationList = document.getElementById('adminRegistrationList');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const taskManagerSessionKey = 'taskManagerSessionUser';
+    const taskManagerAuthKey = 'taskManagerAuthV1';
+    const taskManagerUsersKey = 'taskManagerUsersV1';
+    const taskManagerPendingRegistrationsKey = 'taskManagerPendingRegistrationsV1';
+    const taskManagerTasksKey = 'taskManagerTasksV2';
+    const taskManagerTasksLegacyKey = 'taskManagerTasks';
+    const taskManagerTasksByUserPrefix = 'taskManagerTasksByUserV1::';
+    const taskManagerNotifiedKey = 'taskManagerNotifiedRemindersV1';
+    const reminderCheckIntervalMs = 60 * 1000;
+
+    let tasks = [];
+    let approvedUsers = JSON.parse(localStorage.getItem(taskManagerUsersKey)) || [];
+    let pendingRegistrations = JSON.parse(localStorage.getItem(taskManagerPendingRegistrationsKey)) || [];
+    let notifiedReminders = JSON.parse(localStorage.getItem(taskManagerNotifiedKey)) || {};
+    let activeFilter = 'all';
+    let editingTaskId = null;
+    let reminderIntervalId = null;
+    let isAdminUser = false;
+    let currentUsername = '';
+
+    function saveTasks() {
+      if (!currentUsername) {
+        return;
+      }
+
+      const userTasksKey = getUserTasksStorageKey(currentUsername);
+      localStorage.setItem(userTasksKey, JSON.stringify(tasks));
+
+      if (isAdminAccount(currentUsername)) {
+        localStorage.setItem(taskManagerTasksKey, JSON.stringify(tasks));
+      }
+    }
+
+    function saveApprovedUsers() {
+      localStorage.setItem(taskManagerUsersKey, JSON.stringify(approvedUsers));
+    }
+
+    function savePendingRegistrations() {
+      localStorage.setItem(taskManagerPendingRegistrationsKey, JSON.stringify(pendingRegistrations));
+    }
+
+    function saveNotifiedReminders() {
+      localStorage.setItem(taskManagerNotifiedKey, JSON.stringify(notifiedReminders));
+    }
+
+    function isAdminAccount(username) {
+      const adminUsername = String(getStoredCredentials().username || 'admin').trim().toLowerCase();
+      return String(username || '').trim().toLowerCase() === adminUsername;
+    }
+
+    function getUserTasksStorageKey(username) {
+      const normalized = String(username || '').trim().toLowerCase();
+      return `${taskManagerTasksByUserPrefix}${normalized}`;
+    }
+
+    function loadTasksForUser(username) {
+      const userTasksKey = getUserTasksStorageKey(username);
+      const saved = JSON.parse(localStorage.getItem(userTasksKey));
+      if (Array.isArray(saved)) {
+        return saved;
+      }
+
+      if (isAdminAccount(username)) {
+        const legacyAdminTasks = JSON.parse(localStorage.getItem(taskManagerTasksKey))
+          || JSON.parse(localStorage.getItem(taskManagerTasksLegacyKey))
+          || [];
+        return Array.isArray(legacyAdminTasks) ? legacyAdminTasks : [];
+      }
+
+      return [];
+    }
+
+    function getApprovedUser(username) {
+      const normalized = String(username || '').trim().toLowerCase();
+      return approvedUsers.find(user => String(user.username || '').trim().toLowerCase() === normalized);
+    }
+
+    function approveRegistration(requestId) {
+      const request = pendingRegistrations.find(item => item.id === requestId);
+      if (!request) return;
+
+      approvedUsers = approvedUsers.filter(user => String(user.username || '').trim().toLowerCase() !== String(request.username || '').trim().toLowerCase());
+      approvedUsers.unshift({
+        username: request.username,
+        password: request.password,
+        email: request.email,
+        approvedAt: Date.now()
+      });
+      pendingRegistrations = pendingRegistrations.filter(item => item.id !== requestId);
+      saveApprovedUsers();
+      savePendingRegistrations();
+      renderAdminDashboard();
+    }
+
+    function rejectRegistration(requestId) {
+      pendingRegistrations = pendingRegistrations.filter(item => item.id !== requestId);
+      savePendingRegistrations();
+      renderAdminDashboard();
+    }
+
+    function renderRegistrationRequests() {
+      if (!isAdminUser) {
+        adminRegistrationList.innerHTML = '';
+        return;
+      }
+
+      if (!pendingRegistrations.length) {
+        adminRegistrationList.innerHTML = '<li class="empty">No pending registration requests.</li>';
+        return;
+      }
+
+      adminRegistrationList.innerHTML = '';
+      pendingRegistrations.forEach(request => {
+        const item = document.createElement('li');
+        item.className = 'admin-request-item';
+
+        const title = document.createElement('strong');
+        title.textContent = request.username;
+
+        const meta = document.createElement('div');
+        meta.className = 'admin-request-meta';
+        meta.textContent = `${request.email} • Requested ${new Date(request.requestedAt).toLocaleString()}`;
+
+        const actions = document.createElement('div');
+        actions.className = 'admin-request-actions';
+
+        const approveBtn = document.createElement('button');
+        approveBtn.className = 'approve-btn';
+        approveBtn.type = 'button';
+        approveBtn.textContent = 'Approve';
+        approveBtn.addEventListener('click', () => approveRegistration(request.id));
+
+        const rejectBtn = document.createElement('button');
+        rejectBtn.className = 'reject-btn';
+        rejectBtn.type = 'button';
+        rejectBtn.textContent = 'Reject';
+        rejectBtn.addEventListener('click', () => rejectRegistration(request.id));
+
+        actions.appendChild(approveBtn);
+        actions.appendChild(rejectBtn);
+        item.appendChild(title);
+        item.appendChild(meta);
+        item.appendChild(actions);
+        adminRegistrationList.appendChild(item);
+      });
+    }
+
+    function renderAdminDashboard() {
+      if (!isAdminUser) {
+        adminDashboard.hidden = true;
+        return;
+      }
+
+      adminDashboard.hidden = false;
+      renderRegistrationRequests();
+    }
+
+    function updateNotificationButtonState() {
+      if (!('Notification' in window)) {
+        enableNotificationsBtn.textContent = 'Notifications Not Supported';
+        enableNotificationsBtn.disabled = true;
+        return;
+      }
+
+      if (Notification.permission === 'granted') {
+        enableNotificationsBtn.textContent = 'Reminders Enabled';
+        enableNotificationsBtn.disabled = true;
+      } else if (Notification.permission === 'denied') {
+        enableNotificationsBtn.textContent = 'Reminders Blocked';
+        enableNotificationsBtn.disabled = true;
+      } else {
+        enableNotificationsBtn.textContent = 'Enable Reminders';
+        enableNotificationsBtn.disabled = false;
+      }
+    }
+
+    async function enableNotifications() {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        startReminderLoop();
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      updateNotificationButtonState();
+      if (permission === 'granted') {
+        checkTaskReminders();
+        startReminderLoop();
+      }
+    }
+
+    function getDueTimestamp(task) {
+      if (!task || !task.due) return null;
+      const timestamp = new Date(task.due).getTime();
+      return Number.isNaN(timestamp) ? null : timestamp;
+    }
+
+    function cleanupReminderCache() {
+      const existingTaskIds = new Set(tasks.map(task => String(task.id)));
+      const nextCache = {};
+      Object.keys(notifiedReminders).forEach(key => {
+        const [taskId] = key.split('|');
+        if (existingTaskIds.has(taskId)) {
+          nextCache[key] = true;
+        }
+      });
+      notifiedReminders = nextCache;
+      saveNotifiedReminders();
+    }
+
+    function sendTaskNotification(task, message) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      new Notification('Task Reminder', {
+        body: `${task.text} • ${message}`,
+        tag: `task-${task.id}`
+      });
+    }
+
+    function checkTaskReminders() {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+      const now = Date.now();
+
+      tasks.forEach(task => {
+        if (task.completed) return;
+        const dueAt = getDueTimestamp(task);
+        if (!dueAt) return;
+
+        const msUntilDue = dueAt - now;
+        const dueTimeKey = `${task.id}|duetime`;
+        const overdueKey = `${task.id}|overdue`;
+
+        if (isDueToday(task) && msUntilDue > 0 && msUntilDue <= reminderCheckIntervalMs && !notifiedReminders[dueTimeKey]) {
+          sendTaskNotification(task, `is due now at ${formatDueTime(task.due)}.`);
+          notifiedReminders[dueTimeKey] = true;
+        }
+
+        if (msUntilDue <= 0 && !notifiedReminders[overdueKey]) {
+          sendTaskNotification(task, 'is now overdue.');
+          notifiedReminders[overdueKey] = true;
+        }
+      });
+
+      saveNotifiedReminders();
+    }
+
+    function startReminderLoop() {
+      if (reminderIntervalId !== null) {
+        clearInterval(reminderIntervalId);
+      }
+      checkTaskReminders();
+      reminderIntervalId = setInterval(checkTaskReminders, reminderCheckIntervalMs);
+    }
+
+    function stopReminderLoop() {
+      if (reminderIntervalId !== null) {
+        clearInterval(reminderIntervalId);
+        reminderIntervalId = null;
+      }
+    }
+
+    function normalizeTask(task) {
+      return {
+        category: 'Classes',
+        priority: 'Medium',
+        due: '',
+        duration: null,
+        estimate: null,
+        notes: '',
+        createdAt: Date.now(),
+        ...task
+      };
+    }
+
+    function getStoredCredentials() {
+      try {
+        const stored = JSON.parse(localStorage.getItem(taskManagerAuthKey));
+        if (stored && stored.username && stored.password) {
+          return {
+            ...stored,
+            email: stored.email || 'taskmanagerA024@gmail.com'
+          };
+        }
+      } catch (_error) {
+        // Fall back to default credentials below.
+      }
+
+      return {
+        username: 'admin',
+        password: 'Ms.Moreno',
+        email: 'taskmanagerA024@gmail.com'
+      };
+    }
+
+    function showLogin() {
+      authViews.hidden = false;
+      taskApp.hidden = true;
+      adminApp.hidden = true;
+      workspaceViews.classList.remove('admin-split');
+      isAdminUser = false;
+      currentUsername = '';
+      const credentials = getStoredCredentials();
+      loginUsername.value = credentials.username;
+      loginPassword.value = '';
+      loginMsg.textContent = '';
+      loginUsername.focus();
+    }
+
+    function showTaskApp(username) {
+      currentUsername = username;
+      tasks = loadTasksForUser(username).map(normalizeTask);
+      welcomeText.textContent = `Logged in as ${username}`;
+      isAdminUser = isAdminAccount(username);
+      authViews.hidden = true;
+      adminApp.hidden = true;
+      taskApp.hidden = false;
+      workspaceViews.classList.remove('admin-split');
+      renderTasks();
+      updateNotificationButtonState();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        startReminderLoop();
+      }
+      taskInput.focus();
+    }
+
+    function showAdminApp(username) {
+      currentUsername = username;
+      tasks = loadTasksForUser(username).map(normalizeTask);
+      welcomeText.textContent = `Logged in as ${username}`;
+      isAdminUser = true;
+      authViews.hidden = true;
+      taskApp.hidden = false;
+      adminApp.hidden = false;
+      workspaceViews.classList.add('admin-split');
+      renderTasks();
+      updateNotificationButtonState();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        startReminderLoop();
+      }
+      renderAdminDashboard();
+      taskInput.focus();
+    }
+
+    function login() {
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value.trim();
+      const credentials = getStoredCredentials();
+
+      if (!username || !password) {
+        loginMsg.textContent = 'Please enter username and password.';
+        return;
+      }
+
+      const isAdminLogin = username === credentials.username && password === credentials.password;
+      const approvedUser = getApprovedUser(username);
+      const isApprovedLogin = approvedUser && approvedUser.password === password;
+
+      if (!isAdminLogin && !isApprovedLogin) {
+        loginMsg.textContent = 'Invalid username or password.';
+        return;
+      }
+
+      localStorage.setItem(taskManagerSessionKey, username);
+      loginMsg.textContent = '';
+      loginPassword.value = '';
+      if (isAdminLogin) {
+        showAdminApp(username);
+        return;
+      }
+
+      showTaskApp(username);
+    }
+
+    function saveCredentials() {
+      const username = registerUsername.value.trim();
+      const password = registerPassword.value.trim();
+      const email = registerEmail.value.trim();
+
+      if (!username || !password || !email) {
+        credsMsg.classList.remove('success');
+        credsMsg.textContent = 'Enter username, password, and your email.';
+        return;
+      }
+
+      const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailPattern.test(email)) {
+        credsMsg.classList.remove('success');
+        credsMsg.textContent = 'Please enter a valid email address.';
+        return;
+      }
+
+      if (isAdminAccount(username)) {
+        credsMsg.classList.remove('success');
+        credsMsg.textContent = 'The admin username cannot be requested for registration.';
+        return;
+      }
+
+      const alreadyApproved = getApprovedUser(username);
+      const alreadyPending = pendingRegistrations.some(item => String(item.username || '').trim().toLowerCase() === username.toLowerCase());
+      if (alreadyApproved || alreadyPending) {
+        credsMsg.classList.remove('success');
+        credsMsg.textContent = 'This username is already approved or pending review.';
+        return;
+      }
+
+      pendingRegistrations.unshift({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        username,
+        password,
+        email,
+        requestedAt: Date.now()
+      });
+      savePendingRegistrations();
+
+      credsMsg.classList.add('success');
+      credsMsg.textContent = 'Registration request submitted. Wait for admin approval.';
+      loginUsername.value = username;
+      loginPassword.value = '';
+      registerUsername.value = '';
+      registerEmail.value = '';
+      registerPassword.value = '';
+      loginMsg.textContent = '';
+      setTimeout(() => {
+        showLogin();
+      }, 300);
+    }
+
+    function logout() {
+      stopReminderLoop();
+      isAdminUser = false;
+      localStorage.removeItem(taskManagerSessionKey);
+      window.location.reload();
+    }
+
+    function isOverdue(task) {
+      if (!task.due || task.completed) return false;
+      return new Date(task.due).getTime() < Date.now();
+    }
+
+    function isDueToday(task) {
+      if (!task.due) return false;
+      const due = new Date(task.due);
+      const now = new Date();
+      return due.getFullYear() === now.getFullYear()
+        && due.getMonth() === now.getMonth()
+        && due.getDate() === now.getDate();
+    }
+
+    function formatDue(due) {
+      if (!due) return 'No due date';
+      const date = new Date(due);
+      if (Number.isNaN(date.getTime())) return 'No due date';
+      return date.toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function formatDueTime(due) {
+      if (!due) return '';
+      const date = new Date(due);
+      if (Number.isNaN(date.getTime())) return '';
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function updateSummary() {
+      const total = tasks.length;
+      const completed = tasks.filter(task => task.completed).length;
+      const pending = total - completed;
+      const overdue = tasks.filter(task => isOverdue(task)).length;
+      const dueToday = tasks.filter(task => isDueToday(task) && !task.completed).length;
+
+      taskCount.textContent = `${total} task${total !== 1 ? 's' : ''} (${completed} completed)`;
+      totalStat.textContent = total;
+      pendingStat.textContent = pending;
+      completedStat.textContent = completed;
+      overdueStat.textContent = overdue;
+      todayStat.textContent = dueToday;
+    }
+
+    function renderDueTodayTasks() {
+      const dueTodayTasks = tasks
+        .filter(task => !task.completed && isDueToday(task) && task.due)
+        .sort((first, second) => new Date(first.due).getTime() - new Date(second.due).getTime());
+
+      if (!dueTodayTasks.length) {
+        dueReminderInfo.value = 'No pending tasks are due today.';
+        dueReminderInfo.classList.remove('blink-alert');
+        return;
+      }
+
+      dueReminderInfo.value = dueTodayTasks
+        .map(task => `${formatDueTime(task.due)} - ${task.text}`)
+        .join('\n');
+      dueReminderInfo.classList.add('blink-alert');
+    }
+
+    function getEstimateFromInputs() {
+      const days = Math.max(0, Number(durationDaysInput.value) || 0);
+      const hours = Math.max(0, Number(durationHoursInput.value) || 0);
+      const minutes = Math.max(0, Number(durationMinutesInput.value) || 0);
+
+      if (!days && !hours && !minutes) return null;
+
+      return {
+        days,
+        hours,
+        minutes,
+        totalMinutes: (days * 24 * 60) + (hours * 60) + minutes
+      };
+    }
+
+    function formatEstimate(task) {
+      if (task.estimate && typeof task.estimate === 'object') {
+        const parts = [];
+        if (task.estimate.days) parts.push(`${task.estimate.days}d`);
+        if (task.estimate.hours) parts.push(`${task.estimate.hours}h`);
+        if (task.estimate.minutes) parts.push(`${task.estimate.minutes}m`);
+        return parts.length ? parts.join(' ') : 'n/a';
+      }
+
+      if (task.duration) {
+        return `${task.duration}m`;
+      }
+
+      return 'n/a';
+    }
+
+    function getFilteredTasks() {
+      if (activeFilter === 'all') return tasks;
+      if (activeFilter === 'pending') return tasks.filter(task => !task.completed);
+      if (activeFilter === 'completed') return tasks.filter(task => task.completed);
+      if (activeFilter === 'overdue') return tasks.filter(task => isOverdue(task));
+      if (activeFilter === 'classes') return tasks.filter(task => task.category === 'Classes');
+      if (activeFilter === 'work') return tasks.filter(task => task.category === 'Work');
+      if (activeFilter === 'personal') return tasks.filter(task => task.category === 'Personal');
+      return tasks;
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+      const visibleTasks = getFilteredTasks();
+      cleanupReminderCache();
+
+      if (visibleTasks.length === 0) {
+        const empty = document.createElement('li');
+        empty.className = 'empty';
+        empty.textContent = tasks.length === 0
+          ? 'No tasks yet. Add your first task.'
+          : 'No tasks match the selected filter.';
+        taskList.appendChild(empty);
+        updateSummary();
+        renderAdminDashboard();
+        checkTaskReminders();
+        return;
+      }
+
+      const sortedTasks = [...visibleTasks].sort((first, second) => {
+        if (first.completed !== second.completed) {
+          return first.completed ? 1 : -1;
+        }
+
+        if (first.due && second.due) {
+          return new Date(first.due).getTime() - new Date(second.due).getTime();
+        }
+
+        if (first.due) return -1;
+        if (second.due) return 1;
+        return second.createdAt - first.createdAt;
+      });
+
+      sortedTasks.forEach(task => {
+        const li = document.createElement('li');
+        li.className = `task ${task.completed ? 'done' : ''}`;
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = task.completed;
+        checkbox.addEventListener('change', () => {
+          task.completed = checkbox.checked;
+          saveTasks();
+          renderTasks();
+        });
+
+        const taskMain = document.createElement('div');
+        taskMain.className = 'task-main';
+
+        const title = document.createElement('div');
+        title.className = 'task-title';
+        title.textContent = task.text;
+
+        const metaRow = document.createElement('div');
+        metaRow.className = 'task-meta-row';
+
+        const category = document.createElement('span');
+        category.className = 'chip';
+        category.textContent = task.category;
+
+        const priority = document.createElement('span');
+        priority.className = `chip ${task.priority.toLowerCase()}`;
+        priority.textContent = `${task.priority} priority`;
+
+        const due = document.createElement('span');
+        if (isOverdue(task)) {
+          due.className = 'chip overdue';
+          due.textContent = `Overdue: ${formatDue(task.due)}`;
+        } else if (!task.completed && isDueToday(task)) {
+          due.className = 'chip today';
+          due.textContent = `Due Today: ${formatDueTime(task.due)}`;
+        } else {
+          due.className = 'chip';
+          due.textContent = `Due: ${formatDue(task.due)}`;
+        }
+
+        const duration = document.createElement('span');
+        duration.className = 'chip';
+        duration.textContent = `Est: ${formatEstimate(task)}`;
+
+        metaRow.appendChild(category);
+        metaRow.appendChild(priority);
+        metaRow.appendChild(due);
+        metaRow.appendChild(duration);
+
+        taskMain.appendChild(title);
+        taskMain.appendChild(metaRow);
+
+        if (task.notes) {
+          const note = document.createElement('div');
+          note.className = 'task-note';
+          note.textContent = task.notes;
+          taskMain.appendChild(note);
+        }
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => {
+          if (editingTaskId === task.id) {
+            resetForm();
+          }
+          tasks = tasks.filter(t => t.id !== task.id);
+          saveTasks();
+          renderTasks();
+        });
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.textContent = 'Edit';
+        editBtn.addEventListener('click', () => {
+          taskInput.value = task.text;
+          categoryInput.value = task.category;
+          priorityInput.value = task.priority;
+          dueInput.value = task.due || '';
+          if (task.estimate && typeof task.estimate === 'object') {
+            durationDaysInput.value = task.estimate.days ?? '';
+            durationHoursInput.value = task.estimate.hours ?? '';
+            durationMinutesInput.value = task.estimate.minutes ?? '';
+          } else {
+            durationDaysInput.value = '';
+            durationHoursInput.value = '';
+            durationMinutesInput.value = task.duration ?? '';
+          }
+          notesInput.value = task.notes || '';
+          editingTaskId = task.id;
+          addTaskBtn.textContent = 'Update Task';
+          cancelEditBtn.hidden = false;
+          taskInput.focus();
+          taskInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        const taskActions = document.createElement('div');
+        taskActions.className = 'task-actions';
+        taskActions.appendChild(editBtn);
+        taskActions.appendChild(deleteBtn);
+
+        li.appendChild(checkbox);
+        li.appendChild(taskMain);
+        li.appendChild(taskActions);
+        taskList.appendChild(li);
+      });
+
+      updateSummary();
+      renderDueTodayTasks();
+      renderAdminDashboard();
+      checkTaskReminders();
+    }
+
+    function resetForm() {
+      taskInput.value = '';
+      notesInput.value = '';
+      dueInput.value = '';
+      durationDaysInput.value = '';
+      durationHoursInput.value = '';
+      durationMinutesInput.value = '';
+      priorityInput.value = 'Medium';
+      categoryInput.value = 'Classes';
+      editingTaskId = null;
+      addTaskBtn.textContent = 'Add Task';
+      cancelEditBtn.hidden = true;
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+      const estimate = getEstimateFromInputs();
+      if (!text) return;
+
+      if (editingTaskId !== null) {
+        tasks = tasks.map(task => {
+          if (task.id !== editingTaskId) return task;
+          return {
+            ...task,
+            text,
+            category: categoryInput.value,
+            priority: priorityInput.value,
+            due: dueInput.value,
+            estimate,
+            duration: estimate ? estimate.totalMinutes : null,
+            notes: notesInput.value.trim()
+          };
+        });
+
+        resetForm();
+        taskInput.focus();
+        saveTasks();
+        renderTasks();
+        return;
+      }
+
+      tasks.unshift({
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        text,
+        category: categoryInput.value,
+        priority: priorityInput.value,
+        due: dueInput.value,
+        estimate,
+        duration: estimate ? estimate.totalMinutes : null,
+        notes: notesInput.value.trim(),
+        completed: false,
+        createdAt: Date.now()
+      });
+
+      resetForm();
+      taskInput.focus();
+      saveTasks();
+      renderTasks();
+    }
+
+    function setFilter(nextFilter) {
+      activeFilter = nextFilter;
+      filterButtons.forEach(button => {
+        button.classList.toggle('active', button.dataset.filter === nextFilter);
+      });
+      renderTasks();
+    }
+
+    function bindPasswordToggle(toggleElement, passwordInput) {
+      if (!toggleElement || !passwordInput) {
+        return;
+      }
+
+      toggleElement.addEventListener('change', () => {
+        passwordInput.type = toggleElement.checked ? 'text' : 'password';
+      });
+    }
+
+    addTaskBtn.addEventListener('click', addTask);
+    cancelEditBtn.addEventListener('click', () => {
+      resetForm();
+      taskInput.focus();
+    });
+
+    loginBtn.addEventListener('click', login);
+    saveCredsBtn.addEventListener('click', saveCredentials);
+    enableNotificationsBtn.addEventListener('click', enableNotifications);
+
+    loginUsername.addEventListener('keydown', event => {
+      if (event.key === 'Enter') login();
+    });
+
+    loginPassword.addEventListener('keydown', event => {
+      if (event.key === 'Enter') login();
+    });
+
+    registerPassword.addEventListener('keydown', event => {
+      if (event.key === 'Enter') saveCredentials();
+    });
+
+    bindPasswordToggle(showLoginPassword, loginPassword);
+    bindPasswordToggle(showRegisterPassword, registerPassword);
+
+    logoutBtn.addEventListener('click', logout);
+    adminLogoutBtn.addEventListener('click', logout);
+
+    clearCompletedBtn.addEventListener('click', () => {
+      tasks = tasks.filter(task => !task.completed);
+      saveTasks();
+      renderTasks();
+    });
+
+    taskInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') addTask();
+    });
+
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => setFilter(button.dataset.filter));
+    });
+
+    tasks = tasks.map(normalizeTask);
+    approvedUsers = approvedUsers.filter(user => user && user.username && user.password);
+    pendingRegistrations = pendingRegistrations.filter(request => request && request.username && request.password && request.email);
+    saveApprovedUsers();
+    savePendingRegistrations();
+    localStorage.removeItem(taskManagerTasksLegacyKey);
+    updateNotificationButtonState();
+
+    renderTasks();
+
+    const loggedInUser = localStorage.getItem(taskManagerSessionKey);
+    if (loggedInUser) {
+      if (isAdminAccount(loggedInUser)) {
+        showAdminApp(loggedInUser);
+      } else {
+        showTaskApp(loggedInUser);
+      }
+    } else {
+      stopReminderLoop();
+      showLogin();
+    }
+  </script>
+</body>
+</html>
